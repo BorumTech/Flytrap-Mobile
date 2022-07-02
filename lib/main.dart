@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -94,7 +96,14 @@ class MyRoomsPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateRoomPage(),
+                      ),
+                    );
+                  },
                   child: const Text("Create", style: TextStyle(fontSize: 18)),
                 ),
                 ElevatedButton(
@@ -251,6 +260,95 @@ Widget seat(int index) => Container(
         ),
       ),
     );
+
+class CreateRoomPage extends StatelessWidget {
+  CreateRoomPage({Key? key}) : super(key: key);
+
+  final Random _random = Random();
+
+  int generateCode() => _random.nextInt(89999) + 10000;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: const Text("Create Room"),
+        ),
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text("Room Code: ${generateCode()}",
+                style: const TextStyle(fontSize: 24)),
+            Container(
+              margin: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                shape: BoxShape.rectangle,
+                border: Border.all(
+                  color: Colors.black,
+                  width: 1.0,
+                ),
+              ),
+              child: const SizedBox(
+                width: 300,
+                child: TextField(
+                  obscureText: true,
+                  style: TextStyle(fontSize: 24),
+                  decoration: InputDecoration(
+                      labelText: "Password",
+                      alignLabelWithHint: true,
+                      contentPadding: EdgeInsets.all(6)),
+                ),
+              ),
+            ),
+            Container(
+              margin:
+                  const EdgeInsets.symmetric(horizontal: 10.0, vertical: 25.0),
+              child: const SizedBox(
+                width: 300,
+                child: TextField(
+                  style: TextStyle(fontSize: 24),
+                  decoration: InputDecoration(
+                    labelText: "Room Name",
+                    alignLabelWithHint: true,
+                    contentPadding: EdgeInsets.all(6),
+                  ),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "Number of Performers",
+                  style: TextStyle(fontSize: 24),
+                ),
+                Container(
+                  margin: const EdgeInsets.all(10),
+                  child: const SizedBox(
+                    width: 100,
+                    child: TextField(
+                      keyboardType: TextInputType.number,
+                      maxLength: 3,
+                      style: TextStyle(fontSize: 24),
+                    ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const SeatSelectionPage()));
+              },
+              child: const Text("Create Room"),
+            ),
+          ],
+        ),
+      );
+}
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
