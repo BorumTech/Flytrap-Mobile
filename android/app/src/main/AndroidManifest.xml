@@ -3,7 +3,7 @@
    <application
         android:label="Flytrap"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -31,4 +31,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+    <queries>
+        <!-- If your app checks for SMS support -->
+        <intent>
+          <action android:name="android.intent.action.VIEW" />
+          <data android:scheme="https" />
+        </intent>
+      </queries>
 </manifest>
