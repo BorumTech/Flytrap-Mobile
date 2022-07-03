@@ -1,6 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flytrap_mobile/audio.dart';
+import 'package:flytrap_mobile/folder.dart';
+import 'package:flytrap_mobile/stage.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
@@ -67,6 +73,36 @@ class FilesPage extends StatefulWidget {
 }
 
 class _FilesPageState extends State<FilesPage> {
+  late Future<FullFolder> folderData;
+  late Future<FolderList> folderList;
+  late Future<AudioList> audioList;
+
+  Future<FullFolder> fetchFolder() async {
+    final response = await http.get(
+      Uri.parse('https://api.audio.borumtech.com/v1/folder?folder_id='),
+      headers: {
+        HttpHeaders.authorizationHeader:
+            'Basic f590aaf962d6460fb0218dbf270f1877',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      debugPrint("Response: ${response.body}");
+      return FullFolder.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception(
+          'Failed to load files: ${jsonDecode(response.body)["error"]["message"]}');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    folderData = fetchFolder();
+    folderList = folderData.then((folder) => folder.folders);
+    audioList = folderData.then((folder) => folder.audios);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,6 +110,81 @@ class _FilesPageState extends State<FilesPage> {
         title: const Text(
           "Flytrap Audio",
           textAlign: TextAlign.center,
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {
+            folderData = fetchFolder();
+            folderList = folderData.then((folder) => folder.folders);
+            audioList = folderData.then((folder) => folder.audios);
+          });
+        },
+        child: ListView(
+          children: [
+            SizedBox(
+              height: 200,
+              child: FutureBuilder<FolderList>(
+                future: folderList,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return GridView.builder(
+                      itemCount: snapshot.data!.length,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 1,
+                      ),
+                      itemBuilder: (context, index) {
+                        final folder = snapshot.data!.folders[index];
+                        debugPrint(folder.toString());
+                        return ListTile(
+                          title: Text(folder.name),
+                          leading: const Icon(Icons.folder),
+                          onTap: () {},
+                        );
+                      },
+                    );
+                  } else if (snapshot.hasError) {
+                    return Text("${snapshot.error}");
+                  }
+                  return const Center(child: CircularProgressIndicator());
+                },
+              ),
+            ),
+            SizedBox(
+              height: 400,
+              child: FutureBuilder<AudioList>(
+                future: audioList,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return GridView.builder(
+                      itemCount: snapshot.data!.length,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 1,
+                      ),
+                      itemBuilder: (context, index) {
+                        final audio = snapshot.data!.audios[index];
+                        debugPrint(audio.toString());
+                        return ListTile(
+                          title: Text(audio.name),
+                          leading: const Icon(Icons.audio_file),
+                          onTap: () {},
+                        );
+                      },
+                    );
+                  } else if (snapshot.hasError) {
+                    return Text("${snapshot.error}");
+                  }
+                  return const Center(child: CircularProgressIndicator());
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -169,6 +280,8 @@ class JoinRoom extends StatelessWidget {
               child: const TextField(
                 style: TextStyle(fontSize: 36),
                 textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                maxLength: 5,
                 decoration: InputDecoration(
                     labelText: "Room Code",
                     floatingLabelAlignment: FloatingLabelAlignment.center,
@@ -228,18 +341,18 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
               crossAxisAlignment: WrapCrossAlignment.center,
               runSpacing: 40.0,
               children: [
-                seat(1),
-                seat(2),
-                seat(3),
-                seat(4),
-                seat(5),
-                seat(6),
-                seat(7),
-                seat(8),
-                seat(9),
-                seat(10),
-                seat(11),
-                seat(12),
+                seat(context, 1),
+                seat(context, 2),
+                seat(context, 3),
+                seat(context, 4),
+                seat(context, 5),
+                seat(context, 6),
+                seat(context, 7),
+                seat(context, 8),
+                seat(context, 9),
+                seat(context, 10),
+                seat(context, 11),
+                seat(context, 12),
               ],
             ),
           ),
@@ -249,14 +362,20 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
   }
 }
 
-Widget seat(int index) => Container(
+Widget seat(BuildContext context, int index) => Container(
       width: 100,
       height: 100,
       color: Colors.green,
       child: Center(
-        child: Text(
-          index.toString(),
-          style: const TextStyle(fontSize: 24),
+        child: TextButton(
+          onPressed: () {
+            Navigator.push(context,
+                MaterialPageRoute(builder: (context) => const StagePage()));
+          },
+          child: Text(
+            index.toString(),
+            style: const TextStyle(fontSize: 24),
+          ),
         ),
       ),
     );
@@ -330,7 +449,6 @@ class CreateRoomPage extends StatelessWidget {
                       keyboardType: TextInputType.number,
                       maxLength: 3,
                       style: TextStyle(fontSize: 24),
-                    ),
                     ),
                   ),
                 ),
