@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 
 class StagePage extends StatefulWidget {
   const StagePage({Key? key}) : super(key: key);
@@ -10,11 +10,11 @@ class StagePage extends StatefulWidget {
 class _StagePageState extends State<StagePage> {
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text("Stage"),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Stage"),
       ),
-      child: Center(
+      body: const Center(
         child: Text("Stage"),
       ),
     );

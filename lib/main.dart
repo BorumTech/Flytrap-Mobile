@@ -9,6 +9,11 @@ import 'package:flytrap_mobile/stage.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
+const routeHome = '/';
+const routeSettings = '/settings';
+const routePrefixFolders = '/folders/';
+const routePrefixAudios = '/audio/';
+
 void main() {
   runApp(const MyApp());
 }
@@ -20,41 +25,59 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        title: 'Flytrap Audio',
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-        ),
-        home: const CurrentPage());
+      title: 'Flytrap Audio',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const CurrentPage(),
+    );
   }
 }
 
 class _CurrentPageState extends State<CurrentPage> {
-  int _currentIndex = 0;
-  final screens = const [FilesPage(), MyRoomsPage(), SettingsPage()];
+  var _currentIndex = 0;
+
+  late final screens = [
+    FolderPage(preview: FolderPreview.root()),
+    const MyRoomsPage(),
+    const SettingsPage(),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: IndexedStack(index: _currentIndex, children: screens),
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          showUnselectedLabels: false,
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.folder),
-              label: 'Files',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.live_tv),
-              label: 'Live Broadcasts',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings),
-              label: 'Settings',
-            ),
-          ],
-        ));
+      body: IndexedStack(
+        index: _currentIndex,
+        children: screens,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        showUnselectedLabels: false,
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          // debugPrint("index: $index");
+          setState(() => _currentIndex = index);
+          // _navigatorKey.currentState!
+          //     .pushNamedAndRemoveUntil(screens[index], (route) => false);
+          // debugPrint("Navigated to ${screens[index]}");
+        },
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.folder),
+            label: 'Files',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.live_tv),
+            label: 'Live Broadcasts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -65,21 +88,24 @@ class CurrentPage extends StatefulWidget {
   State<CurrentPage> createState() => _CurrentPageState();
 }
 
-class FilesPage extends StatefulWidget {
-  const FilesPage({Key? key}) : super(key: key);
+class FolderPage extends StatefulWidget {
+  const FolderPage({super.key, required this.preview});
+
+  final FolderPreview preview;
 
   @override
-  State<FilesPage> createState() => _FilesPageState();
+  State<FolderPage> createState() => _FolderPageState();
 }
 
-class _FilesPageState extends State<FilesPage> {
+class _FolderPageState extends State<FolderPage> {
   late Future<FullFolder> folderData;
   late Future<FolderList> folderList;
   late Future<AudioList> audioList;
 
   Future<FullFolder> fetchFolder() async {
     final response = await http.get(
-      Uri.parse('https://api.audio.borumtech.com/v1/folder?folder_id='),
+      Uri.parse(
+          'https://api.audio.borumtech.com/v1/folder?folder_id=${widget.preview.alphaId}'),
       headers: {
         HttpHeaders.authorizationHeader:
             'Basic f590aaf962d6460fb0218dbf270f1877',
@@ -107,8 +133,8 @@ class _FilesPageState extends State<FilesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Flytrap Audio",
+        title: Text(
+          widget.preview.name,
           textAlign: TextAlign.center,
         ),
       ),
@@ -122,70 +148,97 @@ class _FilesPageState extends State<FilesPage> {
         },
         child: ListView(
           children: [
-            SizedBox(
-              height: 200,
-              child: FutureBuilder<FolderList>(
-                future: folderList,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    return GridView.builder(
-                      itemCount: snapshot.data!.length,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 1,
-                      ),
-                      itemBuilder: (context, index) {
-                        final folder = snapshot.data!.folders[index];
+            FutureBuilder<FolderList>(
+              future: folderList,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return Wrap(
+                    children: snapshot.data!.folders.map(
+                      (folder) {
                         debugPrint(folder.toString());
-                        return ListTile(
-                          title: Text(folder.name),
-                          leading: const Icon(Icons.folder),
-                          onTap: () {},
+                        return SizedBox(
+                          width: MediaQuery.of(context).orientation ==
+                                  Orientation.portrait
+                              ? MediaQuery.of(context).size.width / 2
+                              : MediaQuery.of(context).size.width / 4,
+                          height: 150,
+                          child: ListTile(
+                            title: Text(folder.name),
+                            leading: const Icon(Icons.folder),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => FolderPage(
+                                    preview: folder,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         );
                       },
-                    );
-                  } else if (snapshot.hasError) {
-                    return Text("${snapshot.error}");
-                  }
-                  return const Center(child: CircularProgressIndicator());
-                },
-              ),
+                    ).toList(),
+                  );
+                } else if (snapshot.hasError) {
+                  return Text("${snapshot.error}");
+                }
+                return const Center(child: CircularProgressIndicator());
+              },
             ),
-            SizedBox(
-              height: 400,
-              child: FutureBuilder<AudioList>(
-                future: audioList,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    return GridView.builder(
-                      itemCount: snapshot.data!.length,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 1,
-                      ),
-                      itemBuilder: (context, index) {
-                        final audio = snapshot.data!.audios[index];
-                        debugPrint(audio.toString());
-                        return ListTile(
+            FutureBuilder<AudioList>(
+              future: audioList,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return Wrap(
+                    children: snapshot.data!.audios.map((audio) {
+                      debugPrint(audio.toString());
+                      return SizedBox(
+                        width: MediaQuery.of(context).orientation ==
+                                Orientation.portrait
+                            ? MediaQuery.of(context).size.width / 2
+                            : MediaQuery.of(context).size.width / 4,
+                        height: 150,
+                        child: ListTile(
                           title: Text(audio.name),
                           leading: const Icon(Icons.audio_file),
-                          onTap: () {},
-                        );
-                      },
-                    );
-                  } else if (snapshot.hasError) {
-                    return Text("${snapshot.error}");
-                  }
-                  return const Center(child: CircularProgressIndicator());
-                },
-              ),
+                          style: ListTileStyle.list,
+                          onTap: () {
+                            Navigator.of(context).push(MaterialPageRoute(
+                                builder: (context) =>
+                                    AudioPage(metadata: audio)));
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  );
+                } else if (snapshot.hasError) {
+                  return Text("${snapshot.error}");
+                }
+                return const Center(child: CircularProgressIndicator());
+              },
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class AudioPage extends StatefulWidget {
+  const AudioPage({super.key, required this.metadata});
+
+  final Audio metadata;
+
+  @override
+  State<AudioPage> createState() => _AudioPageState();
+}
+
+class _AudioPageState extends State<AudioPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.metadata.name),
       ),
     );
   }
@@ -197,7 +250,8 @@ class MyRoomsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Rooms")),
+      appBar:
+          AppBar(automaticallyImplyLeading: false, title: const Text("Rooms")),
       body: Column(
         children: [
           Padding(
@@ -208,8 +262,7 @@ class MyRoomsPage extends StatelessWidget {
               children: [
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
+                    Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => CreateRoomPage(),
                       ),
@@ -374,7 +427,7 @@ Widget seat(BuildContext context, int index) => Container(
           },
           child: Text(
             index.toString(),
-            style: const TextStyle(fontSize: 24),
+            style: const TextStyle(fontSize: 24, color: Colors.white),
           ),
         ),
       ),
@@ -480,6 +533,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text("Settings"),
       ),
       body: Column(
